@@ -1,0 +1,122 @@
+services:
+  pgdatabase:
+    image: postgres:13
+    environment:
+        POSTGRES_USER: airflow
+        POSTGRES_PASSWORD: airflow
+        POSTGRES_DB: airflow
+    volumes:
+      - postgres-db-volume:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD","pg_isready","-U","airflow"]
+      interval: 5s
+      retries: 5
+    restart: always
+
+
+docker run -it \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD= "root" \
+    -e POSTGRES_DB= "ny_taxi" \
+    -v /$(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \ 
+postgres:13
+
+
+##********************************************
+#Use this line in the command prompt under the correct directory in the terminal. Hit enter to run docker with the following instructions. The --user=$(id -u):$(id -g) \ is 
+# so that it knows that it runs it as the user.
+docker run -it \
+    --user=$(id -u):$(id -g) \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \
+    postgres:13
+
+
+#In the terminal run the following pgcli command. This is needed to access the database in postgres:
+pgcli -h localhost -p 5432 -u root -d ny_taxi
+#pgcli = is the interactive command line interface for postgres
+#-h localhost = is the host that we are using to run postgres
+#-p is the port that we are using to run postgres. in this case we are using port 5432
+#-u is the user name called 'root' in this case
+#-d is the database name in this case it is called 'ny_taxi'
+##********************************************
+
+##********************************************
+#To run pgadmin from docker use the following docker command to run pgadmin
+#pgadmin is used as a GUI to view the database and interact with it
+docker run -it\
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8080:80 \
+  dpage/pgadmin4
+
+##********************************************
+
+##********************************************Network********************************************
+#Will need to create a network between postgres and pgadmin here is the terminal command line needed to create the network:
+docker network create pg-network
+
+#Docker run will configure the postgres database to the network called pg-network
+docker run -it \
+    --user=$(id -u):$(id -g) \
+    -e POSTGRES_USER="root" \
+    -e POSTGRES_PASSWORD="root" \
+    -e POSTGRES_DB="ny_taxi" \
+    -v $(pwd)/ny_taxi_postgres_data:/var/lib/postgresql/data \
+    -p 5432:5432 \
+    --network=pg-network \
+    --name pg-database \
+    postgres:13
+
+#Docker run will configure the pgadmin to the network called pg-network
+ docker run -it\
+  -e PGADMIN_DEFAULT_EMAIL="admin@admin.com" \
+  -e PGADMIN_DEFAULT_PASSWORD="root" \
+  -p 8080:80 \
+  --network=pg-network \
+  --name pgadmin \
+  dpage/pgadmin4
+
+
+#To convert jupyter notebook to script file use the following line in the terminal:
+jupyter nbconvert --to=script upload-data.ipynb
+
+
+#Docker run will pass the following parameters through the ingest_data.py file
+URL="https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2021-01.parquet"
+python3 ingest_data.py \
+    --user=root \
+    --password=root \
+    --host=localhost \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name=yellow_taxi_trips \
+    --url=${URL}
+
+
+#To build Docker Compose file
+docker build -t taxi_ingest:v001 .
+
+#To Run the Docker Compose file
+URL="https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2021-01.parquet"
+docker run -it \
+  --network=pg-network \
+  taxi_ingest:v001\
+    --user=root \
+    --password=root \
+    --host=pg-database \
+    --port=5432 \
+    --db=ny_taxi \
+    --table_name=yellow_taxi_trips \
+    --url=${URL}
+
+
+# To connect powerbi to postgres containers
+# Connect to postgres 
+# Host is localhost:ny_taxi
+# database: ny_taxi
+# username = root, password = root

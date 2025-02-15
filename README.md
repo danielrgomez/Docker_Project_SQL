@@ -69,6 +69,9 @@ While Docker runs PostgreSQL in the background, Power BI is used to create a das
 
 These graphs provide insights into the optimal locations, days, and times for yellow taxis to maximize earnings in January 2021.
 
+![image](https://github.com/user-attachments/assets/07305062-9a7b-439b-8087-ae647eb1942a)
+
+
 ## Conclusion
 This project demonstrates how to extract, transform, and visualize TLC Trip Record Data using Docker, PostgreSQL, Python, and Power BI. The resulting dashboard provides valuable insights into taxi fare patterns in New York City.
 
